@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Locanear - Realtime Friend Map</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Locanear">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20260916k">
+</head>
+<body>
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Floating Top Bar -->
+    <header class="topbar">
+        <div class="user-pill clickable-pill" id="user-pill" title="Klik untuk Ubah Nama & Profil Kustom">
+            <div class="avatar-badge" id="my-avatar"></div>
+            <div class="user-info">
+                <span class="user-name" id="my-name">Saya</span>
+                <span class="battery-status" id="my-battery">
+                    <i data-lucide="battery" class="bat-icon"></i>
+                    <span id="my-battery-text">100%</span>
+                </span>
+            </div>
+            <span class="edit-pill-badge" title="Ubah Profil">
+                <i data-lucide="pencil"></i>
+            </span>
+        </div>
+
+        <div class="top-actions">
+            <!-- GPS Accuracy Pill with Animated Radar Pulse -->
+            <div class="accuracy-pill" id="accuracy-pill" title="Tingkat Akurasi GPS Perangkat Anda">
+                <span class="radar-dot" id="acc-dot"></span>
+                <span id="my-accuracy">Lokasi Siap</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Right Control Buttons (Clean & Minimalist Vector FABs) -->
+    <div class="floating-controls">
+        <button id="btn-open-settings" class="icon-fab settings-fab" title="Pengaturan & Profil Kustom">
+            <i data-lucide="settings-2"></i>
+        </button>
+        <button id="btn-locate" class="icon-fab" title="Pusatkan ke Lokasi Saya">
+            <i data-lucide="crosshair"></i>
+        </button>
+        <button id="btn-open-chat" class="icon-fab" title="Obrolan Chat">
+            <i data-lucide="message-circle"></i>
+            <span class="badge hidden" id="chat-unread-badge">0</span>
+        </button>
+        <button id="btn-toggle-friends" class="icon-fab" title="Daftar Teman">
+            <i data-lucide="users"></i>
+        </button>
+    </div>
+
+    <!-- Floating Emoji & OTW Reaction Bar (When Friend is clicked) -->
+    <div id="reaction-bar" class="reaction-bar hidden">
+        <div class="reaction-top-row">
+            <div class="reaction-header-info">
+                <span class="reaction-target" id="reaction-target-text">Teman</span>
+                <span class="reaction-dot-sep">•</span>
+                <span class="reaction-dwell-badge" id="reaction-dwell-text">Menghitung durasi...</span>
+            </div>
+            <button id="btn-close-reaction" class="btn-close" title="Tutup">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="reaction-actions-row">
+            <div class="emoji-picker">
+                <button class="emoji-btn reaction-btn-glossy" data-emoji="❤️" title="Love">
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Red%20heart/3D/red_heart_3d.png" alt="Love" class="fluent-3d-emoji" />
+                </button>
+                <button class="emoji-btn reaction-btn-glossy" data-emoji="🔥" title="Fire">
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Fire/3D/fire_3d.png" alt="Fire" class="fluent-3d-emoji" />
+                </button>
+                <button class="emoji-btn reaction-btn-glossy" data-emoji="⚡" title="Zap">
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/High%20voltage/3D/high_voltage_3d.png" alt="Zap" class="fluent-3d-emoji" />
+                </button>
+                <button class="emoji-btn reaction-btn-glossy" data-emoji="🎉" title="Party">
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Party%20popper/3D/party_popper_3d.png" alt="Party" class="fluent-3d-emoji" />
+                </button>
+                <button class="emoji-btn reaction-btn-glossy" data-emoji="👋" title="Wave">
+                    <img src="https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/Waving%20hand/Default/3D/waving_hand_3d_default.png" alt="Wave" class="fluent-3d-emoji" />
+                </button>
+            </div>
+            <button id="btn-trigger-otw" class="btn-otw-trigger" title="Mulai OTW dan Buat Rute Google Maps ke Teman Ini">
+                <i data-lucide="navigation"></i>
+                <span>OTW</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Proximity Alert Banner (<= 500m) -->
+    <div id="proximity-banner" class="proximity-banner hidden">
+        <div class="prox-icon">
+            <i data-lucide="bell-ring"></i>
+        </div>
+        <div class="prox-info">
+            <strong id="prox-title">Teman Sudah Dekat!</strong>
+            <span id="prox-sub">Jarak kalian tinggal kurang dari 500 meter!</span>
+        </div>
+        <button id="btn-close-prox" class="btn-close-circle" title="Tutup">
+            <i data-lucide="x"></i>
+        </button>
+    </div>
+
+    <!-- Google Maps Style OTW Navigation Banner -->
+    <div id="otw-banner" class="otw-banner hidden">
+        <div class="otw-left">
+            <div class="otw-vehicle-badge">
+                <i data-lucide="car"></i>
+            </div>
+            <div class="otw-text-info">
+                <div class="otw-eta-row">
+                    <span class="otw-eta" id="otw-eta-text">Menghitung...</span>
+                    <span class="otw-dist" id="otw-dist-text"></span>
+                </div>
+                <div class="otw-desc" id="otw-desc-text">Rute Google Maps ke Teman</div>
+            </div>
+        </div>
+        <div class="otw-right-actions">
+            <button id="btn-recenter-otw" class="btn-otw-action btn-drive-play" title="Pusatkan Tampilan Peta ke Rute">
+                <i data-lucide="crosshair"></i>
+                <span id="btn-recenter-text">Pusatkan</span>
+            </button>
+            <button id="btn-cancel-otw" class="btn-otw-action btn-drive-close" title="Selesai / Batalkan OTW">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Real-time Chat Drawer -->
+    <!-- Real-time WhatsApp-style Chat Drawer -->
+    <div id="chat-drawer" class="chat-drawer collapsed">
+        
+        <!-- View 1: WhatsApp Chats List (Daftar Obrolan Per Teman) -->
+        <div id="chat-inbox-view" class="chat-view-screen">
+            <div class="wa-inbox-header">
+                <div class="wa-inbox-title-row">
+                    <div class="wa-brand">
+                        <div class="wa-brand-icon"><i data-lucide="message-square-more"></i></div>
+                        <div>
+                            <h3 class="wa-title">Obrolan</h3>
+                            <span class="wa-subtitle" id="wa-online-summary">0 teman aktif</span>
+                        </div>
+                    </div>
+                    <button id="btn-close-chat" class="btn-close-circle" title="Tutup Obrolan">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <!-- WhatsApp Search Bar -->
+                <div class="wa-search-bar">
+                    <i data-lucide="search" class="wa-search-icon"></i>
+                    <input type="text" id="wa-search-input" placeholder="Cari teman atau pesan..." autocomplete="off" />
+                </div>
+            </div>
+
+            <!-- Scrollable Conversations List -->
+            <div class="wa-conversations-list" id="wa-conversations-list">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+        <!-- View 2: WhatsApp Chat Room (Ruang Obrolan Teman) -->
+        <div id="chat-room-view" class="chat-view-screen hidden">
+            <!-- Top App Bar WhatsApp -->
+            <div class="wa-room-header">
+                <div class="wa-room-left">
+                    <button id="btn-back-to-inbox" class="btn-wa-back" title="Kembali ke Daftar Obrolan">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <div class="wa-room-avatar-wrap" id="wa-room-avatar">
+                        <!-- Friend Avatar -->
+                    </div>
+                    <div class="wa-room-user-meta">
+                        <div class="wa-room-name" id="wa-room-name">Nama Teman</div>
+                        <div class="wa-room-status" id="wa-room-status">
+                            <span class="wa-status-dot"></span>
+                            <span id="wa-room-status-text">Online</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="wa-room-actions">
+                    <button id="btn-wa-focus-map" class="btn-wa-action" title="Arahkan Peta ke Teman">
+                        <i data-lucide="navigation"></i>
+                    </button>
+                    <button id="btn-close-chat-room" class="btn-close-circle" title="Tutup">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- WhatsApp Message History Container -->
+            <div class="chat-messages wa-chat-messages" id="chat-messages-box">
+                <div class="chat-empty">
+                    <i data-lucide="message-square-dashed" class="empty-icon"></i>
+                    <p>Belum ada obrolan.<br>Ketik pesan di bawah untuk mulai mengobrol!</p>
+                </div>
+            </div>
+
+            <!-- WhatsApp Quick Chips -->
+            <div class="chat-quick-bar wa-quick-bar">
+                <button id="btn-share-location" class="btn-quick-chat">
+                    <i data-lucide="map-pin"></i>
+                    <span>Bagikan Lokasi</span>
+                </button>
+                <button class="btn-quick-chat-emoji" data-chat-emoji="Hai!">
+                    <i data-lucide="hand" style="width: 14px; height: 14px;"></i>
+                    <span>Hai</span>
+                </button>
+                <button class="btn-quick-chat-emoji" data-chat-emoji="OTW!">
+                    <i data-lucide="navigation-2" style="width: 14px; height: 14px;"></i>
+                    <span>OTW</span>
+                </button>
+                <button class="btn-quick-chat-emoji" data-chat-emoji="Ketemu yuk!">
+                    <i data-lucide="coffee" style="width: 14px; height: 14px;"></i>
+                    <span>Ketemu</span>
+                </button>
+            </div>
+
+            <!-- WhatsApp Bottom Input Bar -->
+            <form id="chat-form" class="chat-input-form wa-input-form">
+                <input type="text" id="chat-input" placeholder="Ketik pesan..." maxlength="300" autocomplete="off" />
+                <button type="submit" id="btn-send-chat" class="btn-chat-send wa-send-btn" title="Kirim Pesan">
+                    <i data-lucide="send"></i>
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Send Meetup Invitation Modal -->
+    <div id="meetup-modal" class="modal-overlay hidden">
+        <div class="modal-card meetup-card">
+            <div class="modal-header-row">
+                <div class="dev-title">
+                    <div class="modal-icon-badge">
+                        <i data-lucide="calendar-heart"></i>
+                    </div>
+                    <h3 id="meetup-modal-title">Ajak Ketemu</h3>
+                </div>
+                <button id="btn-close-meetup" class="btn-close-circle" title="Tutup">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <p class="dev-subtitle">Pilih lokasi pertemuan yang disepakati bersama:</p>
+
+            <div class="form-group">
+                <label>Lokasi Pertemuan:</label>
+                <div class="meetup-place-grid">
+                    <button type="button" class="btn-place-opt active" data-type="friend_loc">
+                        <i data-lucide="user-check"></i>
+                        <span>Lokasi Teman</span>
+                    </button>
+                    <button type="button" class="btn-place-opt" data-type="my_loc">
+                        <i data-lucide="map-pin"></i>
+                        <span>Lokasi Saya</span>
+                    </button>
+                    <button type="button" class="btn-place-opt" data-type="custom" data-lat="-6.9024" data-lng="107.6186" data-name="Gedung Sate Bandung">
+                        <i data-lucide="landmark"></i>
+                        <span>Gedung Sate</span>
+                    </button>
+                    <button type="button" class="btn-place-opt" data-type="custom" data-lat="-6.8897" data-lng="107.5960" data-name="Paris Van Java">
+                        <i data-lucide="shopping-bag"></i>
+                        <span>Paris Van Java</span>
+                    </button>
+                    <button type="button" class="btn-place-opt" data-type="custom" data-lat="-6.9218" data-lng="107.6070" data-name="Alun-Alun Bandung">
+                        <i data-lucide="building-2"></i>
+                        <span>Alun-Alun Bandung</span>
+                    </button>
+                    <button type="button" class="btn-place-opt" data-type="custom" data-lat="-6.1754" data-lng="106.8272" data-name="Monas Jakarta">
+                        <i data-lucide="tower-control"></i>
+                        <span>Monas Jakarta</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="meetup-note-input">Catatan / Ajakan (Opsional):</label>
+                <input type="text" id="meetup-note-input" placeholder="Contoh: Nongkrong santai sore ini yuk!" maxlength="80" />
+            </div>
+
+            <button id="btn-submit-meetup" class="btn-primary btn-accent-gold">
+                <i data-lucide="send"></i>
+                <span>Kirim Ajakan Ketemu</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Incoming Meetup Invitation Modal -->
+    <div id="incoming-meetup-modal" class="modal-overlay hidden">
+        <div class="modal-card incoming-card">
+            <div class="incoming-badge">
+                <i data-lucide="calendar-heart"></i>
+            </div>
+            <h3 id="incoming-title">Ajakan Ketemu Masuk!</h3>
+            <p id="incoming-desc">Teman mengajak kamu bertemu.</p>
+            <div id="incoming-note-box" class="incoming-note">"Nongkrong santai yuk!"</div>
+
+            <div class="incoming-actions">
+                <button id="btn-accept-meetup" class="btn-primary btn-accept">
+                    <i data-lucide="check"></i>
+                    <span>Terima & Buka Rute</span>
+                </button>
+                <button id="btn-reject-meetup" class="btn-reject">
+                    <i data-lucide="x"></i>
+                    <span>Tolak</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet / Drawer: 7-Day History & Timeline -->
+    <div id="history-drawer" class="history-drawer collapsed">
+        <div class="drawer-handle" id="history-drawer-handle"></div>
+        <div class="drawer-header">
+            <div class="history-header-title">
+                <div class="modal-icon-badge small">
+                    <i data-lucide="calendar-days"></i>
+                </div>
+                <h3>Riwayat Perjalanan (Maks 7 Hari)</h3>
+            </div>
+            <button id="btn-close-history" class="btn-text-action">Tutup</button>
+        </div>
+
+        <!-- Horizontal 7-Day Date Selector -->
+        <div class="date-pills-scroll" id="history-date-pills"></div>
+
+        <!-- Mode Tab: Sendiri vs Bersama-sama -->
+        <div class="history-mode-tabs">
+            <button class="hist-tab active" id="tab-hist-self">
+                <i data-lucide="user"></i>
+                <span>Jejak Sendiri</span>
+            </button>
+            <button class="hist-tab" id="tab-hist-together">
+                <i data-lucide="users"></i>
+                <span>Jejak Bersama Teman</span>
+            </button>
+        </div>
+
+        <!-- Daily Stats Card -->
+        <div class="history-stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon-wrap">
+                    <i data-lucide="route"></i>
+                </span>
+                <div class="stat-meta">
+                    <span class="stat-val" id="hist-stat-dist">0.0 km</span>
+                    <span class="stat-label">Total Jarak</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon-wrap">
+                    <i data-lucide="clock"></i>
+                </span>
+                <div class="stat-meta">
+                    <span class="stat-val" id="hist-stat-dur">0 mnt</span>
+                    <span class="stat-label">Durasi Bergerak</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon-wrap">
+                    <i data-lucide="map-pin"></i>
+                </span>
+                <div class="stat-meta">
+                    <span class="stat-val" id="hist-stat-stops">0 Tempat</span>
+                    <span class="stat-label">Pemberhentian</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Replay Controller -->
+        <div class="history-replay-box" id="replay-box">
+            <div class="replay-header">
+                <div class="replay-status">
+                    <span id="replay-status-dot" class="status-dot-pulse"></span>
+                    <strong id="replay-status-text">Putar Ulang Jejak Hari Ini</strong>
+                </div>
+                <div class="replay-speed-group">
+                    <button class="speed-pill active" data-speed="1">1x</button>
+                    <button class="speed-pill" data-speed="2">2x</button>
+                    <button class="speed-pill" data-speed="5">5x</button>
+                </div>
+            </div>
+            <div class="replay-controls-row">
+                <button id="btn-replay-play" class="btn-replay-action">
+                    <i data-lucide="play" id="replay-btn-icon"></i>
+                    <span id="replay-btn-label">Putar Jejak</span>
+                </button>
+                <input type="range" id="replay-progress-slider" min="0" max="100" value="0" class="replay-slider" disabled>
+                <button id="btn-clear-history" class="btn-clear-history" title="Hapus Riwayat Tanggal Ini">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Timeline Log List -->
+        <div class="history-timeline-list" id="history-timeline-list">
+            <div class="empty-state">
+                <i data-lucide="calendar-x" class="empty-icon"></i>
+                <p>Belum ada titik jejak terekam untuk tanggal ini.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet / Drawer: Friends List -->
+    <div id="friends-drawer" class="friends-drawer collapsed">
+        <div class="drawer-handle" id="drawer-handle"></div>
+        <div class="drawer-header">
+            <div class="drawer-header-title">
+                <div class="modal-icon-badge small">
+                    <i data-lucide="users"></i>
+                </div>
+                <h3>Teman Terhubung (<span id="online-count">0</span>)</h3>
+            </div>
+            <button id="btn-minimize-drawer" class="btn-text-action">Tutup</button>
+        </div>
+
+        <!-- Confirmed Friends Content -->
+        <div id="friends-tab-pane">
+            <!-- Magic Invite Link 1-Click Share Box -->
+            <div class="magic-invite-share-card">
+                <div class="magic-invite-header">
+                    <div class="magic-invite-icon-wrap">
+                        <i data-lucide="sparkles"></i>
+                    </div>
+                    <div>
+                        <strong>Undang Teman 1-Klik</strong>
+                        <small>Teman langsung terhubung tanpa perlu ketik kode</small>
+                    </div>
+                </div>
+                <div class="magic-invite-btn-row">
+                    <button type="button" class="btn-magic-share-link" id="btn-drawer-magic-share" title="Bagikan Tautan Undangan">
+                        <i data-lucide="share-2"></i>
+                        <span>Bagikan Tautan</span>
+                    </button>
+                    <button type="button" class="btn-magic-share-wa" id="btn-drawer-magic-wa" title="Kirim via WhatsApp">
+                        <i data-lucide="message-circle"></i>
+                        <span>WhatsApp</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="friends-list" id="friends-list">
+                <div class="empty-state">
+                    <i data-lucide="user-plus" class="empty-icon"></i>
+                    <p>Belum ada teman terhubung. Bagikan tautan undangan 1-klik di atas untuk mulai terhubung!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Login & Authentication Modal -->
+    <div id="join-modal" class="modal-overlay">
+        <script>
+            if (localStorage.getItem('zenloc_auth_user')) {
+                document.getElementById('join-modal').classList.add('hidden');
+            }
+        </script>
+        <div class="modal-card login-card">
+            <!-- Icon/Logo -->
+            <div class="zenly-logo">
+                <div class="logo-icon-wrap">
+                    <i data-lucide="navigation-2"></i>
+                </div>
+                <h2>Locanear</h2>
+                <p>Masuk ke Peta Teman Real-time</p>
+            </div>
+
+            <!-- Form Login Akun (Hanya Icon, Username, Password, Masuk ke Peta, Daftar Akun) -->
+            <form id="form-login" class="login-form-content" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="user" class="input-leading-icon"></i>
+                        <input type="text" id="login-username" placeholder="Username" autocomplete="off" autofocus />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="lock" class="input-leading-icon"></i>
+                        <input type="password" id="login-password" placeholder="Password" autocomplete="off" />
+                        <button type="button" id="btn-toggle-pwd" class="btn-eye-toggle" title="Tampilkan/Sembunyikan Password">
+                            <i data-lucide="eye" id="pwd-eye-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Message Banner -->
+                <div id="login-error-alert" class="login-error-banner hidden">
+                    <i data-lucide="alert-circle"></i>
+                    <span id="login-error-text">Username atau password salah!</span>
+                </div>
+
+                <button type="button" id="btn-login-submit" class="btn-primary btn-submit-login">
+                    <i data-lucide="log-in"></i>
+                    <span>Masuk ke Peta</span>
+                </button>
+
+                <div id="faceid-divider" class="faceid-divider">
+                    <span class="faceid-line"></span>
+                    <span class="faceid-divider-text">atau biometrik</span>
+                    <span class="faceid-line"></span>
+                </div>
+
+                <!-- Tombol Cepat Face ID (Tampil di bawah) -->
+                <button type="button" id="btn-faceid-login" class="btn-faceid-login">
+                    <i data-lucide="scan-face"></i>
+                    <span id="btn-faceid-text">Masuk dengan Face ID</span>
+                </button>
+
+                <!-- Tombol Buka Popup Daftar Akun -->
+                <div class="auth-switch-box">
+                    <span class="auth-switch-text">Belum punya akun?</span>
+                    <button type="button" id="btn-open-register-modal" class="btn-text-link">Daftar Akun</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Popup Modal Terpisah untuk Daftar Akun Baru (Sesuai Gambar 2) -->
+    <div id="register-modal" class="modal-overlay hidden">
+        <div class="modal-card register-modal-card">
+            <button type="button" id="btn-close-register-modal" class="modal-close-circle" title="Tutup">
+                <i data-lucide="x"></i>
+            </button>
+
+            <div class="register-header">
+                <div class="register-badge-icon">
+                    <i data-lucide="user-plus"></i>
+                </div>
+                <h3>Buat Akun Baru</h3>
+                <p class="auth-register-subtitle">(Password Harus Huruf Kapital & Angka)</p>
+            </div>
+
+            <!-- Form Daftar Akun di dalam Popup -->
+            <form id="form-register" class="register-form-content" onsubmit="return false;">
+                <div class="form-group">
+                    <label for="reg-username">Username Baru</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="user" class="input-leading-icon"></i>
+                        <input type="text" id="reg-username" placeholder="Contoh: user123" autocomplete="off" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-password">Password (Harus Huruf Kapital & Angka)</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="lock" class="input-leading-icon"></i>
+                        <input type="password" id="reg-password" placeholder="Buat password baru" autocomplete="new-password" />
+                        <button type="button" id="btn-toggle-reg-pwd" class="btn-eye-toggle" title="Tampilkan/Sembunyikan Password">
+                            <i data-lucide="eye" id="reg-pwd-eye-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Box Ketentuan Password (Persis Gambar 2) -->
+                <div class="password-rules-box">
+                    <span class="rules-title">Ketentuan Password:</span>
+                    <ul class="rules-list">
+                        <li id="rule-min-len" class="rule-item">
+                            <span class="rule-bullet">•</span> Minimal 6 Karakter
+                        </li>
+                        <li id="rule-upper" class="rule-item">
+                            <span class="rule-bullet">•</span> Minimal 1 Huruf Kapital (A–Z)
+                        </li>
+                        <li id="rule-num" class="rule-item">
+                            <span class="rule-bullet">•</span> Minimal 1 Angka (0–9)
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-confirm-password">Ulangi Konfirmasi Password</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="shield-check" class="input-leading-icon"></i>
+                        <input type="password" id="reg-confirm-password" placeholder="Ketik ulang password" autocomplete="new-password" />
+                        <button type="button" id="btn-toggle-reg-confirm-pwd" class="btn-eye-toggle" title="Tampilkan/Sembunyikan Password">
+                            <i data-lucide="eye" id="reg-confirm-pwd-eye-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-security-question">Pertanyaan Keamanan Pemulihan</label>
+                    <div class="select-wrapper">
+                        <select id="reg-security-question" class="custom-auth-select">
+                            <option value="Apa nama hewan peliharaan pertama Anda?">Apa nama hewan peliharaan pertama Anda?</option>
+                            <option value="Apa nama sekolah dasar pertama Anda?">Apa nama sekolah dasar pertama Anda?</option>
+                            <option value="Apa kota kelahiran Anda?">Apa kota kelahiran Anda?</option>
+                            <option value="Apa makanan favorit masa kecil Anda?">Apa makanan favorit masa kecil Anda?</option>
+                            <option value="Siapa nama sahabat masa kecil Anda?">Siapa nama sahabat masa kecil Anda?</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-chevron-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-security-answer">Jawaban Pertanyaan Keamanan</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="help-circle" class="input-leading-icon"></i>
+                        <input type="text" id="reg-security-answer" placeholder="Jawaban Anda (bebas/rahasia)" autocomplete="off" />
+                    </div>
+                </div>
+
+                <!-- Error & Success Message Banners -->
+                <div id="reg-error-alert" class="login-error-banner hidden">
+                    <i data-lucide="alert-circle"></i>
+                    <span id="reg-error-text">Harap lengkapi semua isian!</span>
+                </div>
+
+                <div id="reg-success-alert" class="login-success-banner hidden">
+                    <i data-lucide="check-circle-2"></i>
+                    <span id="reg-success-text">Akun berhasil dibuat! Mengarahkan...</span>
+                </div>
+
+                <button type="button" id="btn-register-submit" class="btn-primary btn-submit-register">
+                    <i data-lucide="user-plus"></i>
+                    <span>Daftar Sekarang</span>
+                </button>
+
+                <button type="button" id="btn-cancel-register" class="btn-back-link">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Kembali ke Login</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unified Settings & Profile Hub Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-card settings-card">
+            <div class="modal-header-row">
+                <div class="dev-title">
+                    <div class="modal-icon-badge">
+                        <i data-lucide="settings-2"></i>
+                    </div>
+                    <h3>Pengaturan & Profil</h3>
+                </div>
+                <button id="btn-close-settings" class="btn-close-circle" title="Tutup">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <p class="dev-subtitle">Kelola profil kustom Anda dan semua pengaturan fitur peta.</p>
+
+            <div class="settings-scroll-content">
+                <!-- 1. Bagian Profil Kustom -->
+                <div class="settings-section">
+                    <div class="section-badge-title">
+                        <i data-lucide="user"></i>
+                        <span>Profil & Foto Profil</span>
+                    </div>
+
+                    <!-- Avatar Preview & Photo Upload Actions -->
+                    <div class="avatar-upload-row">
+                        <div class="avatar-preview-circle" id="settings-avatar-preview">
+                            <span id="settings-avatar-display"></span>
+                        </div>
+                        <div class="avatar-upload-actions">
+                            <input type="file" id="input-profile-photo" accept="image/*" style="display: none;">
+                            <button type="button" id="btn-choose-photo" class="btn-photo-upload">
+                                <i data-lucide="camera"></i>
+                                <span>Upload Foto Profil</span>
+                            </button>
+                            <button type="button" id="btn-remove-photo" class="btn-photo-remove hidden">
+                                <i data-lucide="rotate-ccw"></i>
+                                <span>Ganti ke Avatar</span>
+                            </button>
+                            <small class="upload-hint">Foto dari HP/laptop, auto-crop bulat.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 14px;">
+                        <label for="settings-input-name">Nama / Username Kustom:</label>
+                        <input type="text" id="settings-input-name" placeholder="Ketik nama atau username baru..." maxlength="20" autocomplete="off" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Atau Pilih Avatar Modern:</label>
+                        <div class="avatar-selector" id="settings-avatar-selector">
+                            <!-- Populated dynamically with modern vector avatars -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pilihan Warna Tema Lingkaran:</label>
+                        <div class="color-selector" id="settings-color-selector">
+                            <button type="button" class="color-opt active" data-color="#BEE354" style="background:#BEE354;" title="Chartreuse Neon"></button>
+                            <button type="button" class="color-opt" data-color="#6366f1" style="background:#6366f1;" title="Indigo"></button>
+                            <button type="button" class="color-opt" data-color="#ec4899" style="background:#ec4899;" title="Pink"></button>
+                            <button type="button" class="color-opt" data-color="#06b6d4" style="background:#06b6d4;" title="Cyan"></button>
+                            <button type="button" class="color-opt" data-color="#10b981" style="background:#10b981;" title="Emerald"></button>
+                            <button type="button" class="color-opt" data-color="#f59e0b" style="background:#f59e0b;" title="Amber"></button>
+                            <button type="button" class="color-opt" data-color="#ef4444" style="background:#ef4444;" title="Red"></button>
+                        </div>
+                    </div>
+
+                    <!-- Friend Code Box in Settings -->
+                    <div class="settings-code-box">
+                        <div class="code-info">
+                            <span class="code-label">Kode Teman Anda:</span>
+                            <strong class="code-value" id="settings-friend-code-val">...</strong>
+                        </div>
+                        <button id="btn-settings-copy-code" class="btn-copy-code">
+                            <i data-lucide="copy" id="settings-copy-icon"></i>
+                            <span id="settings-copy-text">Salin</span>
+                        </button>
+                    </div>
+
+                    <!-- Magic Invite Link Share in Settings -->
+                    <div class="magic-invite-share-card in-settings">
+                        <div class="magic-invite-btn-row">
+                            <button type="button" class="btn-magic-share-link" id="btn-settings-magic-share" title="Bagikan Tautan Undangan">
+                                <i data-lucide="share-2"></i>
+                                <span>Bagikan Tautan</span>
+                            </button>
+                            <button type="button" class="btn-magic-share-wa" id="btn-settings-magic-wa" title="Kirim via WhatsApp">
+                                <i data-lucide="message-circle"></i>
+                                <span>WhatsApp</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="btn-settings-save-profile" class="btn-primary-sm" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 13px;">
+                        <i data-lucide="check"></i>
+                        <span>Simpan Perubahan Profil</span>
+                    </button>
+                </div>
+
+                <!-- Bagian Keamanan Biometrik / Face ID -->
+                <div class="settings-section">
+                    <div class="section-badge-title">
+                        <i data-lucide="scan-face"></i>
+                        <span>Keamanan Biometrik / Face ID</span>
+                    </div>
+                    <div class="setting-toggle-row" style="align-items: center;">
+                        <div class="toggle-meta">
+                            <strong id="faceid-status-title">Login Face ID / Biometrik</strong>
+                            <small id="faceid-status-desc">Aktifkan login instan dengan Face ID atau sidik jari di perangkat ini</small>
+                        </div>
+                        <button type="button" id="btn-toggle-faceid" class="btn-faceid-action">
+                            <i data-lucide="scan-face"></i>
+                            <span id="faceid-btn-label">Aktifkan Face ID</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Bagian Mode Hantu (Ghost Mode) -->
+                <div class="settings-section">
+                    <div class="section-badge-title">
+                        <i data-lucide="shield"></i>
+                        <span>Privasi & Ghost Mode</span>
+                    </div>
+                    <div class="setting-toggle-row">
+                        <div class="toggle-meta">
+                            <strong id="settings-ghost-status-label">Mode Hantu: Nonaktif</strong>
+                            <small>Samarkan / sembunyikan lokasi asli Anda dari teman (±500m)</small>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-ghost-switch">
+                            <span class="switch-slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 4. Bagian Fitur Cepat -->
+                <div class="settings-section">
+                    <div class="section-badge-title">
+                        <i data-lucide="zap"></i>
+                        <span>Fitur & Eksperimen</span>
+                    </div>
+                    <div class="settings-feature-grid">
+                        <button type="button" id="btn-settings-open-history" class="btn-settings-tool">
+                            <div class="tool-icon-wrap">
+                                <i data-lucide="calendar-days"></i>
+                            </div>
+                            <div class="tool-texts">
+                                <strong>Riwayat Jejak 7 Hari</strong>
+                                <small>Timeline & putar ulang rute perjalanan</small>
+                            </div>
+                            <i data-lucide="chevron-right" class="tool-arrow"></i>
+                        </button>
+
+                        <button type="button" id="btn-settings-logout" class="btn-settings-tool btn-logout-action">
+                            <div class="tool-icon-wrap icon-logout">
+                                <i data-lucide="log-out"></i>
+                            </div>
+                            <div class="tool-texts">
+                                <strong>Keluar / Ganti Akun</strong>
+                                <small>Beralih antara ilprad & carrjies</small>
+                            </div>
+                            <i data-lucide="chevron-right" class="tool-arrow"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Magic Invite Welcome Modal (Instant 1-Click Confirmation) -->
+    <div id="magic-invite-modal" class="modal-overlay hidden">
+        <div class="modal-card magic-invite-card">
+            <div class="magic-invite-avatar-wrap">
+                <div class="magic-invite-avatar-circle" id="magic-inviter-avatar"></div>
+                <span class="magic-invite-pulse-ring"></span>
+            </div>
+            <span class="invite-tag-badge">UNDANGAN PERTEMANAN</span>
+            <h3 id="magic-inviter-name" class="magic-inviter-name">Teman Mengundang Anda!</h3>
+            <p class="magic-inviter-desc">
+                Mulai saling pantau lokasi real-time, status baterai, dan ketemuan langsung di peta Locanear.
+            </p>
+            <div class="magic-invite-actions">
+                <button type="button" id="btn-accept-magic-invite" class="btn-primary" style="margin-bottom: 8px;">
+                    <i data-lucide="user-plus"></i>
+                    <span>Terima & Bagikan Lokasi</span>
+                </button>
+                <button type="button" id="btn-decline-magic-invite" class="btn-cancel-clean" style="width: 100%; border-radius: 14px;">
+                    <span>Nanti Saja</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Remove Friend Modal -->
+    <div id="confirm-remove-modal" class="modal-overlay hidden">
+        <div class="modal-card confirm-card">
+            <div class="incoming-badge badge-danger">
+                <i data-lucide="trash-2"></i>
+            </div>
+            <h3 id="remove-modal-title">Hapus Teman?</h3>
+            <p id="remove-modal-desc" style="color: #94a3b8; font-size: 13px; margin: 10px 0 18px 0; line-height: 1.4;">
+                Apakah Anda yakin ingin menghapus pertemanan dengan <strong id="remove-target-name" style="color:#fff;">Teman</strong>? Lokasi kalian tidak akan saling terlihat lagi.
+            </p>
+            <div class="incoming-actions">
+                <button type="button" id="btn-confirm-remove-yes" class="btn-reject btn-danger-solid">
+                    <i data-lucide="trash-2"></i>
+                    <span>Ya, Hapus</span>
+                </button>
+                <button type="button" id="btn-confirm-remove-cancel" class="btn-primary btn-cancel-clean">
+                    <span>Batal</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Scripts -->
+    <script src="lucide.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="app.js?v=20260916k"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "locanear-map-tracker",
+  "version": "1.0.0",
+  "description": "Locanear - Realtime Friend Map Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "cap:sync": "cap sync",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios"
+  },
+  "keywords": [
+    "map",
+    "tracker",
+    "zenly",
+    "realtime"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}

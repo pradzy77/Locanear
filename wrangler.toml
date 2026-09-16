@@ -1,0 +1,10 @@
+name = "locanear"
+compatibility_date = "2026-09-15"
+pages_build_output_dir = "./public"
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "zenloc-db"
+database_id = "5310b7f1-b24b-4387-8c9e-217801ecf209"
+
