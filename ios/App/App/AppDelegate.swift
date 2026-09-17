@@ -6,7 +6,7 @@ import CoreLocation
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
-    private let locationManager = CLLocationManager()
+    private var locationManager: CLLocationManager?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         setupLocationManager()
@@ -14,20 +14,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     }
 
     private func setupLocationManager() {
-        locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 5.0
+        let manager = CLLocationManager()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 5.0
         
         // Memungkinkan pelacakan lokasi latar belakang terus berjalan (Zenly style)
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = false
+        manager.allowsBackgroundLocationUpdates = true
+        manager.pausesLocationUpdatesAutomatically = false
         if #available(iOS 11.0, *) {
-            locationManager.showsBackgroundLocationIndicator = true
+            manager.showsBackgroundLocationIndicator = true
         }
         
-        locationManager.requestAlwaysAuthorization()
-        locationManager.startUpdatingLocation()
-        locationManager.startMonitoringSignificantLocationChanges()
+        manager.requestAlwaysAuthorization()
+        manager.startUpdatingLocation()
+        manager.startMonitoringSignificantLocationChanges()
+        self.locationManager = manager
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -46,18 +48,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func applicationWillResignActive(_ application: UIApplication) {}
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // Tetap pastikan location updates aktif saat background
-        locationManager.startUpdatingLocation()
+        locationManager?.startUpdatingLocation()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        locationManager.startUpdatingLocation()
+        locationManager?.startUpdatingLocation()
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {}
 
     func applicationWillTerminate(_ application: UIApplication) {
-        locationManager.startMonitoringSignificantLocationChanges()
+        locationManager?.startMonitoringSignificantLocationChanges()
     }
 
     func application(_ application: UIApplication,

@@ -34,24 +34,33 @@ jobs:
       - name: Build Xcode Project & Create IPA
         run: |
           cd ios/App
-          xcodebuild -project App.xcodeproj \
+          xcodebuild \
+            -project App.xcodeproj \
             -scheme App \
-            -destination 'generic/platform=iOS' \
             -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath derived_data \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             build
-          mkdir -p build/Payload
-          cp -r build/Release-iphoneos/App.app build/Payload/
-          cd build
+
+          APP_PATH=$(find derived_data/Build/Products -name "App.app" -type d | head -n 1)
+          echo "Found compiled app at: $APP_PATH"
+          
+          mkdir -p output/Payload
+          cp -r "$APP_PATH" output/Payload/
+          cd output
           zip -r Locanear.ipa Payload
+          cd ..
+          cp output/Locanear.ipa ./Locanear.ipa
 
       - name: Upload Build Artifacts (.ipa & .app)
         uses: actions/upload-artifact@v4
         with:
           name: Locanear-iOS-Build
           path: |
-            ios/App/build/Locanear.ipa
-            ios/App/build/Release-iphoneos/App.app
+            ios/App/Locanear.ipa
+            ios/App/output/Payload/App.app
           if-no-files-found: warn
