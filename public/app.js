@@ -269,9 +269,15 @@ function initMap() {
     updateMyMarker();
     renderAccuracyUI(myProfile.accuracy || 15);
 
-    // Handle map click
+    // Handle map click - clean screen by closing any open drawers or reaction bar
     map.on('click', () => {
         closeReactionBar();
+        const fDrawer = document.getElementById('friends-drawer');
+        if (fDrawer) fDrawer.classList.add('collapsed');
+        const cDrawer = document.getElementById('chat-drawer');
+        if (cDrawer) cDrawer.classList.add('collapsed');
+        const hDrawer = document.getElementById('history-drawer');
+        if (hDrawer) hDrawer.classList.add('collapsed');
     });
 
     // Re-adjust marker clusters when zooming or panning
@@ -1659,34 +1665,63 @@ function initUI() {
         });
     }
 
-    // Friends Drawer Toggle
+    // Friends Drawer Toggle & Robust Close
     const drawer = document.getElementById('friends-drawer');
     const btnToggleFriends = document.getElementById('btn-toggle-friends');
+
+    function closeFriendsDrawer(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (drawer) drawer.classList.add('collapsed');
+    }
+
+    function toggleFriendsDrawer(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (!drawer) return;
+        const willOpen = drawer.classList.contains('collapsed');
+        if (willOpen) {
+            if (typeof closeReactionBar === 'function') closeReactionBar();
+            if (histDrawer) histDrawer.classList.add('collapsed');
+            const chatDrawer = document.getElementById('chat-drawer');
+            if (chatDrawer) chatDrawer.classList.add('collapsed');
+        }
+        drawer.classList.toggle('collapsed');
+    }
+
     if (btnToggleFriends && drawer) {
-        btnToggleFriends.addEventListener('click', () => {
-            const willOpen = drawer.classList.contains('collapsed');
-            if (willOpen) {
-                if (typeof closeReactionBar === 'function') closeReactionBar();
-                if (histDrawer) histDrawer.classList.add('collapsed');
-                const chatDrawer = document.getElementById('chat-drawer');
-                if (chatDrawer) chatDrawer.classList.add('collapsed');
-            }
-            drawer.classList.toggle('collapsed');
-        });
+        btnToggleFriends.addEventListener('click', toggleFriendsDrawer);
     }
 
     const drawerHandle = document.getElementById('drawer-handle');
     if (drawerHandle && drawer) {
-        drawerHandle.addEventListener('click', () => {
-            drawer.classList.toggle('collapsed');
-        });
+        drawerHandle.addEventListener('click', closeFriendsDrawer);
+        drawerHandle.addEventListener('touchend', closeFriendsDrawer);
     }
 
     const btnMinDrawer = document.getElementById('btn-minimize-drawer');
     if (btnMinDrawer && drawer) {
-        btnMinDrawer.addEventListener('click', () => {
-            drawer.classList.add('collapsed');
-        });
+        btnMinDrawer.addEventListener('click', closeFriendsDrawer);
+        btnMinDrawer.addEventListener('touchend', closeFriendsDrawer);
+    }
+
+    // Touch Swipe Down to close drawer
+    let drawerTouchStartY = 0;
+    if (drawer) {
+        drawer.addEventListener('touchstart', (e) => {
+            drawerTouchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        drawer.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].screenY;
+            if (touchEndY - drawerTouchStartY > 45 && drawer.scrollTop <= 5) {
+                closeFriendsDrawer();
+            }
+        }, { passive: true });
     }
 
     // Reaction Emoji Buttons
@@ -2269,6 +2304,16 @@ function initModal() {
         }
 
         modal.classList.add('hidden');
+
+        // Pastikan layar bersih saat masuk/login: tutup semua drawer & reaction bar
+        const fDrawer = document.getElementById('friends-drawer');
+        if (fDrawer) fDrawer.classList.add('collapsed');
+        const cDrawer = document.getElementById('chat-drawer');
+        if (cDrawer) cDrawer.classList.add('collapsed');
+        const hDrawer = document.getElementById('history-drawer');
+        if (hDrawer) hDrawer.classList.add('collapsed');
+        if (typeof closeReactionBar === 'function') closeReactionBar();
+
         updateMyMarker();
         renderAccuracyUI(myProfile.accuracy || 15);
         if (map && myProfile.lat && myProfile.lng) {

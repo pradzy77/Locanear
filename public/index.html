@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260916k">
+    <link rel="stylesheet" href="style.css?v=20260917b">
 </head>
 <body>
     <!-- Map Container -->
@@ -331,7 +331,9 @@
                 </div>
                 <h3>Riwayat Perjalanan (Maks 7 Hari)</h3>
             </div>
-            <button id="btn-close-history" class="btn-text-action">Tutup</button>
+            <button id="btn-close-history" class="btn-close-drawer-circle" title="Tutup">
+                <i data-lucide="x"></i>
+            </button>
         </div>
 
         <!-- Horizontal 7-Day Date Selector -->
@@ -424,7 +426,9 @@
                 </div>
                 <h3>Teman Terhubung (<span id="online-count">0</span>)</h3>
             </div>
-            <button id="btn-minimize-drawer" class="btn-text-action">Tutup</button>
+            <button id="btn-minimize-drawer" class="btn-close-drawer-circle" title="Tutup">
+                <i data-lucide="x"></i>
+            </button>
         </div>
 
         <!-- Confirmed Friends Content -->
@@ -863,6 +867,6 @@
     <script src="lucide.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="app.js?v=20260916k"></script>
+    <script src="app.js?v=20260917b"></script>
 </body>
 </html>
